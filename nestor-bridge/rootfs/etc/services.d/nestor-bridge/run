@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start Nestor Bridge
+# ==============================================================================
+bashio::log.info "Starting Nestor Bridge..."
+
+exec dotnet /app/NestorBridge.dll

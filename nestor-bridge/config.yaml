@@ -1,0 +1,49 @@
+name: "Nestor Bridge"
+version: "0.1.0"
+slug: "nestor_bridge"
+description: "Bridge MQTT v5 <-> Home Assistant WebSocket for Nestor cloud"
+url: "https://github.com/trecobat/nestor-bridge"
+arch:
+  - aarch64
+startup: services
+boot: auto
+hassio_api: true
+homeassistant_api: true
+auth_api: true
+host_network: false
+options:
+  mqtt_host: ""
+  mqtt_port: 8883
+  mqtt_client_id: ""
+  box_id: ""
+  auth_mode: "sas"
+  sas_username: ""
+  sas_password: ""
+  cert_path: "/ssl/nestor/device.pem"
+  key_path: "/ssl/nestor/device.key"
+  ca_path: "/ssl/nestor/ca.pem"
+  log_level: "info"
+  telemetry_filter:
+    domains:
+      - "light"
+      - "switch"
+      - "sensor"
+      - "climate"
+      - "binary_sensor"
+schema:
+  mqtt_host: str
+  mqtt_port: port
+  mqtt_client_id: str
+  box_id: str
+  auth_mode: "list(sas|x509)"
+  sas_username: "str?"
+  sas_password: "str?"
+  cert_path: str
+  key_path: str
+  ca_path: str
+  log_level: "list(trace|debug|info|warning|error)"
+  telemetry_filter:
+    domains:
+      - str
+map:
+  - ssl:ro

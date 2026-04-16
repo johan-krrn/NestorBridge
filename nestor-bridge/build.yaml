@@ -1,0 +1,4 @@
+build_from:
+  aarch64: "mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim"
+args:
+  BUILD_ARCH: aarch64
