@@ -37,8 +37,7 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
         .WithProtocolVersion(MqttProtocolVersion.V500)
         .WithClientId(_options.MqttClientId)
         .WithTcpServer(_options.MqttHost, _options.MqttPort)
-        .WithCleanSession(false)
-        .WithSessionExpiryInterval(3600)
+        .WithCleanSession(true)
         .WithKeepAlivePeriod(TimeSpan.FromSeconds(30));
 
     if (string.Equals(_options.AuthMode, "x509", StringComparison.OrdinalIgnoreCase))
