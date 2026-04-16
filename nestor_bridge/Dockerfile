@@ -1,3 +1,5 @@
+ARG BUILD_FROM
+
 ###############################################################################
 # Stage 1 — Build (always x64/arm64 auto-detected by Docker buildx)
 ###############################################################################
@@ -20,7 +22,6 @@ RUN dotnet publish src/NestorBridge/NestorBridge.csproj \
 ###############################################################################
 # Stage 2 — Runtime on HA base (s6-overlay + bashio pre-installed)
 ###############################################################################
-ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Install .NET 8 runtime on top of the HA base image
