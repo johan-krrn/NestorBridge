@@ -97,14 +97,19 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
       throw new FileNotFoundException($"Client key not found: {_options.KeyPath}");
 
     var cert = X509Certificate2.CreateFromPemFile(_options.CertPath, _options.KeyPath);
+    // Re-export to PKCS12 (required on some platforms for TLS client auth)
+    cert = new X509Certificate2(cert.Export(X509ContentType.Pkcs12));
+
+    // Event Grid requires the client authentication name in the Username field
+    builder.WithCredentials(_options.MqttClientId, "");
 
     var tlsOptions = new MqttClientTlsOptionsBuilder()
-        .UseTls()
-        .WithSslProtocols(SslProtocols.Tls12 | SslProtocols.Tls13)
-        .WithClientCertificates(new List<X509Certificate2> { cert })
-        .WithCertificateValidationHandler(ctx => ctx.SslPolicyErrors == System.Net.Security.SslPolicyErrors.None);
+    .UseTls()
+    .WithSslProtocols(SslProtocols.Tls12 | SslProtocols.Tls13)
+    .WithClientCertificates(new List<X509Certificate2> { cert })
+    .Build();
 
-    builder.WithTlsOptions(tlsOptions.Build());
+    builder.WithTlsOptions(tlsOptions);
   }
 
   private void ConfigureSas(MqttClientOptionsBuilder builder)
