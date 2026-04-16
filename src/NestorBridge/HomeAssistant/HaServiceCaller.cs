@@ -43,9 +43,20 @@ public sealed class HaServiceCaller
 
       if (result.Success == true)
       {
-        _logger.LogInformation("Service call succeeded for {Entity}", entityId);
-        // TODO(ben): extract context id from result if present
-        return (true, null, null);
+        // Extract context id from: {"result": {"context": {"id": "01HW..."}}} 
+        string? contextId = null;
+        if (result.Result.HasValue && result.Result.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+          if (result.Result.Value.TryGetProperty("context", out var ctx) &&
+              ctx.TryGetProperty("id", out var idProp))
+          {
+            contextId = idProp.GetString();
+          }
+        }
+
+        _logger.LogInformation("Service call succeeded for {Entity} (context={ContextId})",
+            entityId, contextId);
+        return (true, contextId, null);
       }
 
       var error = result.Error?.Message ?? "Unknown HA error";

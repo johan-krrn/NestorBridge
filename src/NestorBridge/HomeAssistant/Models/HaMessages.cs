@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace NestorBridge.HomeAssistant.Models;
@@ -23,7 +24,7 @@ public sealed class HaMessage
   public HaError? Error { get; set; }
 
   [JsonPropertyName("result")]
-  public object? Result { get; set; }
+  public JsonElement? Result { get; set; }
 }
 
 public sealed class HaError

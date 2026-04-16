@@ -42,13 +42,14 @@ builder.Services.AddSingleton<HaServiceCaller>();
 builder.Services.AddSingleton<CommandTranslator>();
 builder.Services.AddSingleton<TelemetryTranslator>();
 
-// Hosted services (workers)
+// Bootstrap FIRST — Generic Host starts IHostedService in registration order.
+// Connections must be established before workers subscribe to events.
+builder.Services.AddHostedService<BootstrapService>();
+
+// Workers start after bootstrap
 builder.Services.AddHostedService<DownlinkWorker>();
 builder.Services.AddHostedService<UplinkWorker>();
 builder.Services.AddHostedService<HeartbeatWorker>();
-
-// Bootstrap: connect MQTT + HA WS before starting workers
-builder.Services.AddHostedService<BootstrapService>();
 
 var app = builder.Build();
 await app.RunAsync();

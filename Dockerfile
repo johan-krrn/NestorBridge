@@ -1,10 +1,11 @@
 ###############################################################################
-# Stage 1 — Build
+# Stage 1 — Build (always x64/arm64 auto-detected by Docker buildx)
 ###############################################################################
-FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
-ARG TARGETARCH=arm64
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
 
+ARG TARGETARCH
 WORKDIR /src
+
 COPY src/NestorBridge/NestorBridge.csproj src/NestorBridge/
 RUN dotnet restore src/NestorBridge/NestorBridge.csproj -r linux-${TARGETARCH}
 
@@ -13,25 +14,37 @@ RUN dotnet publish src/NestorBridge/NestorBridge.csproj \
   -c Release \
   -r linux-${TARGETARCH} \
   --self-contained false \
+  --no-restore \
   -o /app/publish
 
 ###############################################################################
-# Stage 2 — Runtime
+# Stage 2 — Runtime on HA base (s6-overlay + bashio pre-installed)
 ###############################################################################
-FROM mcr.microsoft.com/dotnet/runtime:8.0-bookworm-slim-arm64v8 AS runtime
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 
-# Install s6-overlay (HA add-on requirement)
-ARG S6_OVERLAY_VERSION=3.1.6.2
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-aarch64.tar.xz /tmp
-RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-aarch64.tar.xz \
-  && rm -f /tmp/s6-overlay-*.tar.xz
+# Install .NET 8 runtime on top of the HA base image
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  curl \
+  ca-certificates \
+  && curl -fsSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
+  -o /tmp/ms-prod.deb \
+  && dpkg -i /tmp/ms-prod.deb \
+  && rm /tmp/ms-prod.deb \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends dotnet-runtime-8.0 \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
-# Copy published app
+# Copy the published .NET app
 COPY --from=build /app/publish /app
 
-# Copy s6 service definitions
+# Copy s6 service definitions (run, finish)
 COPY rootfs/ /
 
-ENTRYPOINT ["/init"]
+# Ensure scripts are executable (Windows checkouts may lose the +x bit)
+RUN chmod a+x /etc/services.d/nestor-bridge/run \
+  && chmod a+x /etc/services.d/nestor-bridge/finish
+
+# NOTE: no ENTRYPOINT — the HA base image already provides /init (s6-overlay)

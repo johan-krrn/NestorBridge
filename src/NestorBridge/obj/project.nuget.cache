@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "voAqxA5j0K0=",
+  "dgSpecHash": "W/ewM5lhXNw=",
   "success": true,
-  "projectFilePath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj",
+  "projectFilePath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\johanke\\.nuget\\packages\\microsoft.extensions.configuration\\8.0.0\\microsoft.extensions.configuration.8.0.0.nupkg.sha512",
     "C:\\Users\\johanke\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",

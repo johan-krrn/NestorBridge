@@ -1,19 +1,13 @@
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 
 namespace NestorBridge.Configuration;
 
 /// <summary>
-/// Loads /data/options.json with snake_case property names as injected by HA Supervisor.
+/// Loads /data/options.json injected by HA Supervisor.
+/// Snake_case keys in the JSON file are mapped to C# properties via [ConfigurationKeyName] on BridgeOptions.
 /// </summary>
 public static class OptionsJsonLoader
 {
-  private static readonly JsonSerializerOptions JsonOptions = new()
-  {
-    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    PropertyNameCaseInsensitive = true
-  };
-
   public static IConfigurationBuilder AddHaOptionsJson(
       this IConfigurationBuilder builder,
       string? path = null)

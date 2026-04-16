@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj": {}
+    "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj": {}
   },
   "projects": {
-    "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj": {
+    "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj",
+        "projectUniqueName": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj",
         "projectName": "NestorBridge",
-        "projectPath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj",
+        "projectPath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj",
         "packagesPath": "C:\\Users\\johanke\\.nuget\\packages\\",
-        "outputPath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\obj\\",
+        "outputPath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\johanke\\AppData\\Roaming\\NuGet\\NuGet.Config"

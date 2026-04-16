@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "s9hl1O74AlE=",
+  "dgSpecHash": "CJFJFj6hSoM=",
   "success": true,
-  "projectFilePath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
+  "projectFilePath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\johanke\\.nuget\\packages\\castle.core\\5.1.1\\castle.core.5.1.1.nupkg.sha512",
     "C:\\Users\\johanke\\.nuget\\packages\\microsoft.codecoverage\\17.9.0\\microsoft.codecoverage.17.9.0.nupkg.sha512",

@@ -2554,11 +2554,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
+      "projectUniqueName": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
       "projectName": "NestorBridge.Tests",
-      "projectPath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
+      "projectPath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge.Tests\\NestorBridge.Tests.csproj",
       "packagesPath": "C:\\Users\\johanke\\.nuget\\packages\\",
-      "outputPath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge.Tests\\obj\\",
+      "outputPath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge.Tests\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\johanke\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -2573,8 +2573,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj": {
-              "projectPath": "C:\\Projects\\HA\\NestorBridge\\nestor-bridge\\src\\NestorBridge\\NestorBridge.csproj"
+            "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj": {
+              "projectPath": "C:\\Projects\\HA\\NestorBridge\\src\\NestorBridge\\NestorBridge.csproj"
             }
           }
         }

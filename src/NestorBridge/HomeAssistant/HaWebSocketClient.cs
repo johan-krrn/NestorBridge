@@ -23,6 +23,8 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
   private int _reconnectDelayMs = 1000;
   private const int MaxReconnectDelayMs = 60_000;
   private const string DefaultWsEndpoint = "ws://supervisor/core/websocket";
+  // Track the reconnect task so it is not fire-and-forget
+  private Task _reconnectTask = Task.CompletedTask;
 
   public event Func<HaEvent, Task>? StateChanged;
 
@@ -194,7 +196,8 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
     catch (WebSocketException ex)
     {
       _logger.LogWarning(ex, "HA WebSocket connection lost");
-      _ = ReconnectAsync();
+      // Store the task — avoids fire-and-forget; errors are logged inside ReconnectAsync
+      _reconnectTask = ReconnectAsync();
     }
   }
 
@@ -210,6 +213,13 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
       {
         await ConnectAsync(CancellationToken.None);
         _logger.LogInformation("HA WebSocket reconnected");
+        return;
+      }
+      catch (UnauthorizedAccessException ex)
+      {
+        // Token is invalid — retrying would loop forever; require a restart
+        _logger.LogCritical(ex,
+            "HA token is invalid. Reconnection aborted. Restart the add-on with a valid token.");
         return;
       }
       catch (Exception ex)
