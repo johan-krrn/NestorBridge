@@ -105,12 +105,6 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
         .WithClientCertificates(new List<X509Certificate2> { cert })
         .WithCertificateValidationHandler(ctx => ctx.SslPolicyErrors == System.Net.Security.SslPolicyErrors.None);
 
-    if (File.Exists(_options.CaPath))
-    {
-      var caCert = new X509Certificate2(_options.CaPath);
-      tlsOptions.WithTrustChain(new X509Certificate2Collection { caCert });
-    }
-
     builder.WithTlsOptions(tlsOptions.Build());
   }
 
