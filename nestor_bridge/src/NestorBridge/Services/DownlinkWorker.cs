@@ -18,6 +18,7 @@ public sealed class DownlinkWorker : IHostedService
 {
   private readonly IMqttBridge _mqtt;
   private readonly HaServiceCaller _serviceCaller;
+  private readonly LocalMqttPublisher _localMqtt;
   private readonly CommandTranslator _translator;
   private readonly BridgeOptions _options;
   private readonly MessageLog _messageLog;
@@ -26,6 +27,7 @@ public sealed class DownlinkWorker : IHostedService
   public DownlinkWorker(
       IMqttBridge mqtt,
       HaServiceCaller serviceCaller,
+      LocalMqttPublisher localMqtt,
       CommandTranslator translator,
       IOptions<BridgeOptions> options,
       MessageLog messageLog,
@@ -33,6 +35,7 @@ public sealed class DownlinkWorker : IHostedService
   {
     _mqtt = mqtt;
     _serviceCaller = serviceCaller;
+    _localMqtt = localMqtt;
     _translator = translator;
     _options = options.Value;
     _messageLog = messageLog;
@@ -75,8 +78,29 @@ public sealed class DownlinkWorker : IHostedService
       }
 
       _logger.LogInformation("No CloudCommand parsed; forwarding raw payload to HA MQTT topic {SubTopic}", subTopic);
-      var (ptSuccess, ptError) = await _serviceCaller.PublishMqttAsync(
-          subTopic, payloadStr, CancellationToken.None);
+
+      bool ptSuccess;
+      string? ptError;
+      if (_localMqtt.IsEnabled)
+      {
+        try
+        {
+          await _localMqtt.PublishAsync(subTopic, payloadStr, CancellationToken.None);
+          ptSuccess = true;
+          ptError = null;
+        }
+        catch (Exception ex)
+        {
+          ptSuccess = false;
+          ptError = ex.Message;
+          _logger.LogError(ex, "Local MQTT publish failed for {Topic}", subTopic);
+        }
+      }
+      else
+      {
+        (ptSuccess, ptError) = await _serviceCaller.PublishMqttAsync(
+            subTopic, payloadStr, CancellationToken.None);
+      }
 
       _messageLog.Add(new MessageLogEntry(
           DateTime.UtcNow, MessageDirection.Outbound, subTopic, payloadStr,
