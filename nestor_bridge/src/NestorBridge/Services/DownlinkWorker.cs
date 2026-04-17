@@ -6,6 +6,7 @@ using NestorBridge.Configuration;
 using NestorBridge.HomeAssistant;
 using NestorBridge.Mqtt;
 using NestorBridge.Translation;
+using NestorBridge.Web;
 
 namespace NestorBridge.Services;
 
@@ -19,6 +20,7 @@ public sealed class DownlinkWorker : IHostedService
   private readonly HaServiceCaller _serviceCaller;
   private readonly CommandTranslator _translator;
   private readonly BridgeOptions _options;
+  private readonly MessageLog _messageLog;
   private readonly ILogger<DownlinkWorker> _logger;
 
   public DownlinkWorker(
@@ -26,12 +28,14 @@ public sealed class DownlinkWorker : IHostedService
       HaServiceCaller serviceCaller,
       CommandTranslator translator,
       IOptions<BridgeOptions> options,
+      MessageLog messageLog,
       ILogger<DownlinkWorker> logger)
   {
     _mqtt = mqtt;
     _serviceCaller = serviceCaller;
     _translator = translator;
     _options = options.Value;
+    _messageLog = messageLog;
     _logger = logger;
   }
 
@@ -51,13 +55,17 @@ public sealed class DownlinkWorker : IHostedService
 
   private async Task OnMqttMessageAsync(string topic, byte[] payload)
   {
+    var payloadStr = System.Text.Encoding.UTF8.GetString(payload);
     _logger.LogDebug("Downlink command received on {Topic}", topic);
+
+    // Log inbound command
+    _messageLog.Add(new MessageLogEntry(
+        DateTime.UtcNow, MessageDirection.Inbound, topic, payloadStr));
 
     var command = _translator.Translate(payload);
     if (command is null)
     {
       _logger.LogWarning("Malformed command on {Topic}, sending error ack", topic);
-      // Can't ack without commandId — just log
       return;
     }
 
@@ -69,6 +77,12 @@ public sealed class DownlinkWorker : IHostedService
 
     await _mqtt.PublishAsync(ackTopic, ackPayload,
         MqttQualityOfServiceLevel.AtLeastOnce, CancellationToken.None);
+
+    // Log outbound ack
+    _messageLog.Add(new MessageLogEntry(
+        DateTime.UtcNow, MessageDirection.Outbound, ackTopic,
+        System.Text.Encoding.UTF8.GetString(ackPayload),
+        success ? "success" : "error"));
 
     _logger.LogInformation("Command {CommandId} processed: {Status}",
         command.CommandId, success ? "success" : "error");

@@ -7,19 +7,17 @@ using NestorBridge.HomeAssistant;
 using NestorBridge.HomeAssistant.Models;
 using NestorBridge.Mqtt;
 using NestorBridge.Translation;
+using NestorBridge.Web;
 
 namespace NestorBridge.Services;
 
-/// <summary>
-/// Uplink worker: subscribes to HA state_changed events via WebSocket,
-/// translates them to telemetry payloads, and publishes to cloud MQTT.
-/// </summary>
 public sealed class UplinkWorker : IHostedService
 {
   private readonly IHaWebSocketClient _haClient;
   private readonly IMqttBridge _mqtt;
   private readonly TelemetryTranslator _translator;
   private readonly BridgeOptions _options;
+  private readonly MessageLog _messageLog;
   private readonly ILogger<UplinkWorker> _logger;
 
   public UplinkWorker(
@@ -27,12 +25,14 @@ public sealed class UplinkWorker : IHostedService
       IMqttBridge mqtt,
       TelemetryTranslator translator,
       IOptions<BridgeOptions> options,
+      MessageLog messageLog,
       ILogger<UplinkWorker> logger)
   {
     _haClient = haClient;
     _mqtt = mqtt;
     _translator = translator;
     _options = options.Value;
+    _messageLog = messageLog;
     _logger = logger;
   }
 
@@ -63,6 +63,10 @@ public sealed class UplinkWorker : IHostedService
     {
       await _mqtt.PublishAsync(topic, payload,
           MqttQualityOfServiceLevel.AtMostOnce, CancellationToken.None);
+
+      _messageLog.Add(new MessageLogEntry(
+          DateTime.UtcNow, MessageDirection.Outbound, topic,
+          System.Text.Encoding.UTF8.GetString(payload)));
 
       _logger.LogDebug("Telemetry published for {EntityId}", entityId);
     }
