@@ -34,7 +34,7 @@ RUN apt-get update \
   && dpkg -i /tmp/ms-prod.deb \
   && rm /tmp/ms-prod.deb \
   && apt-get update \
-  && apt-get install -y --no-install-recommends aspnet-runtime-8.0 \
+  && apt-get install -y --no-install-recommends aspnetcore-runtime-8.0 \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
