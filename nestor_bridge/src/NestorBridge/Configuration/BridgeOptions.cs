@@ -54,20 +54,6 @@ public sealed class BridgeOptions
   [ConfigurationKeyName("telemetry_filter")]
   public TelemetryFilterOptions TelemetryFilter { get; set; } = new();
 
-  /// <summary>Optional: hostname of local HA MQTT broker (e.g. core-mosquitto) for direct MQTT passthrough.
-  /// When set, passthrough commands are published directly to this broker instead of via mqtt.publish WebSocket service.</summary>
-  [ConfigurationKeyName("local_mqtt_host")]
-  public string? LocalMqttHost { get; set; }
-
-  [ConfigurationKeyName("local_mqtt_port")]
-  public int LocalMqttPort { get; set; } = 1883;
-
-  [ConfigurationKeyName("local_mqtt_user")]
-  public string? LocalMqttUser { get; set; }
-
-  [ConfigurationKeyName("local_mqtt_password")]
-  public string? LocalMqttPassword { get; set; }
-
   /// <summary>
   /// Validates required configuration fields. Throws if invalid.
   /// </summary>

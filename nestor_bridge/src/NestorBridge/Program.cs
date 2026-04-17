@@ -44,7 +44,6 @@ builder.Services.AddSingleton<MessageLog>();
 builder.Services.AddSingleton<IMqttBridge, MqttBridge>();
 builder.Services.AddSingleton<IHaWebSocketClient, HaWebSocketClient>();
 builder.Services.AddSingleton<HaServiceCaller>();
-builder.Services.AddSingleton<LocalMqttPublisher>();
 builder.Services.AddSingleton<CommandTranslator>();
 builder.Services.AddSingleton<TelemetryTranslator>();
 
