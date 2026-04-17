@@ -83,7 +83,7 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
     _reconnectDelayMs = 1000;
   }
 
-  public async Task<HaMessage> CallServiceAsync(string domain, string service, string entityId,
+  public async Task<HaMessage> CallServiceAsync(string domain, string service, string? entityId,
       Dictionary<string, object>? serviceData, CancellationToken cancellationToken)
   {
     var id = Interlocked.Increment(ref _messageId);
@@ -93,7 +93,7 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
       Domain = domain,
       Service = service,
       ServiceData = serviceData,
-      Target = new HaTarget { EntityId = entityId }
+      Target = string.IsNullOrEmpty(entityId) ? null : new HaTarget { EntityId = entityId }
     };
 
     var tcs = new TaskCompletionSource<HaMessage>(TaskCreationOptions.RunContinuationsAsynchronously);

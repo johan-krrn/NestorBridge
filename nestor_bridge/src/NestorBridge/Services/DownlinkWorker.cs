@@ -65,7 +65,22 @@ public sealed class DownlinkWorker : IHostedService
     var command = _translator.Translate(payload);
     if (command is null)
     {
-      _logger.LogWarning("Malformed command on {Topic}, sending error ack", topic);
+      // Not a CloudCommand envelope — try MQTT passthrough:
+      // extract the HA MQTT sub-topic from the MQTT topic path and forward the raw payload.
+      var subTopic = Topics.ExtractSubTopic(_options.BoxId, topic);
+      if (subTopic is null)
+      {
+        _logger.LogWarning("Malformed command on {Topic} and no sub-topic extractable, dropping", topic);
+        return;
+      }
+
+      _logger.LogInformation("No CloudCommand parsed; forwarding raw payload to HA MQTT topic {SubTopic}", subTopic);
+      var (ptSuccess, ptError) = await _serviceCaller.PublishMqttAsync(
+          subTopic, payloadStr, CancellationToken.None);
+
+      _messageLog.Add(new MessageLogEntry(
+          DateTime.UtcNow, MessageDirection.Outbound, subTopic, payloadStr,
+          ptSuccess ? "mqtt-passthrough" : $"error: {ptError}"));
       return;
     }
 

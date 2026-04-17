@@ -10,8 +10,8 @@ public interface IHaWebSocketClient
   /// <summary>Connect, authenticate, and subscribe to events.</summary>
   Task ConnectAsync(CancellationToken cancellationToken);
 
-  /// <summary>Call a service on HA (e.g. light.turn_on).</summary>
-  Task<HaMessage> CallServiceAsync(string domain, string service, string entityId,
+  /// <summary>Call a service on HA (e.g. light.turn_on). entityId is optional (e.g. not needed for mqtt.publish).</summary>
+  Task<HaMessage> CallServiceAsync(string domain, string service, string? entityId,
       Dictionary<string, object>? serviceData, CancellationToken cancellationToken);
 
   /// <summary>Disconnect cleanly.</summary>

@@ -19,4 +19,17 @@ public static class Topics
 
   public static string Heartbeat(string boxId) =>
       $"devices/{boxId}/heartbeat";
+
+  /// <summary>
+  /// Extract the HA MQTT sub-topic from a full downlink topic.
+  /// e.g. "devices/mybox/commands/zigbee2mqtt/prise/set" → "zigbee2mqtt/prise/set"
+  /// Returns null if the topic does not match the expected prefix.
+  /// </summary>
+  public static string? ExtractSubTopic(string boxId, string fullTopic)
+  {
+    var prefix = $"devices/{boxId}/commands/";
+    return fullTopic.StartsWith(prefix, StringComparison.Ordinal) && fullTopic.Length > prefix.Length
+        ? fullTopic[prefix.Length..]
+        : null;
+  }
 }

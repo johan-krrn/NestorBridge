@@ -70,4 +70,33 @@ public sealed class HaServiceCaller
       return (false, null, ex.Message);
     }
   }
+
+  /// <summary>
+  /// Publish a raw payload to a local HA MQTT topic via the HA WebSocket mqtt.publish service.
+  /// Used for MQTT passthrough commands (topic-encoded routing).
+  /// </summary>
+  public async Task<(bool Success, string? Error)> PublishMqttAsync(
+      string mqttTopic, string payload, CancellationToken cancellationToken)
+  {
+    _logger.LogInformation("Publishing to HA MQTT topic {Topic}", mqttTopic);
+    try
+    {
+      var result = await _client.CallServiceAsync(
+          "mqtt", "publish", null,
+          new Dictionary<string, object> { ["topic"] = mqttTopic, ["payload"] = payload },
+          cancellationToken);
+
+      if (result.Success == true)
+        return (true, null);
+
+      var error = result.Error?.Message ?? "Unknown HA error";
+      _logger.LogError("mqtt.publish failed for {Topic}: {Error}", mqttTopic, error);
+      return (false, error);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Exception calling mqtt.publish for {Topic}", mqttTopic);
+      return (false, ex.Message);
+    }
+  }
 }
