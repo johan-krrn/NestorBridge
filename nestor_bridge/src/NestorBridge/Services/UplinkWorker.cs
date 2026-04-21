@@ -6,6 +6,7 @@ using NestorBridge.Configuration;
 using NestorBridge.HomeAssistant;
 using NestorBridge.HomeAssistant.Models;
 using NestorBridge.Mqtt;
+using NestorBridge.SignalR;
 using NestorBridge.Translation;
 using NestorBridge.Web;
 
@@ -15,6 +16,7 @@ public sealed class UplinkWorker : IHostedService
 {
   private readonly IHaWebSocketClient _haClient;
   private readonly IMqttBridge _mqtt;
+  private readonly ISignalRBridgeClient _signalR;
   private readonly TelemetryTranslator _translator;
   private readonly BridgeOptions _options;
   private readonly MessageLog _messageLog;
@@ -23,6 +25,7 @@ public sealed class UplinkWorker : IHostedService
   public UplinkWorker(
       IHaWebSocketClient haClient,
       IMqttBridge mqtt,
+      ISignalRBridgeClient signalR,
       TelemetryTranslator translator,
       IOptions<BridgeOptions> options,
       MessageLog messageLog,
@@ -30,6 +33,7 @@ public sealed class UplinkWorker : IHostedService
   {
     _haClient = haClient;
     _mqtt = mqtt;
+    _signalR = signalR;
     _translator = translator;
     _options = options.Value;
     _messageLog = messageLog;
@@ -73,6 +77,20 @@ public sealed class UplinkWorker : IHostedService
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to publish telemetry for {EntityId}", entityId);
+    }
+
+    // Also relay to mobile clients via SignalR if enabled
+    if (_signalR.IsEnabled)
+    {
+      try
+      {
+        var payloadStr = System.Text.Encoding.UTF8.GetString(payload);
+        await _signalR.RelayToClientsAsync("state_changed", payloadStr, CancellationToken.None);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to relay telemetry via SignalR for {EntityId}", entityId);
+      }
     }
   }
 }

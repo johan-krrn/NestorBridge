@@ -31,6 +31,8 @@ options:
   log_level: "info"
   no_tls: false
   ha_ws_endpoint: ""
+  signalr_hub_url: ""
+  signalr_api_key: ""
   telemetry_filter:
     domains:
       - "light"
@@ -52,6 +54,8 @@ schema:
   log_level: "list(trace|debug|info|warning|error)"
   no_tls: bool
   ha_ws_endpoint: "str?"
+  signalr_hub_url: "str?"
+  signalr_api_key: "str?"
   telemetry_filter:
     domains:
       - str

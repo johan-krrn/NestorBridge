@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -5,6 +6,7 @@ using MQTTnet.Protocol;
 using NestorBridge.Configuration;
 using NestorBridge.HomeAssistant;
 using NestorBridge.Mqtt;
+using NestorBridge.SignalR;
 using NestorBridge.Translation;
 using NestorBridge.Web;
 
@@ -17,6 +19,7 @@ namespace NestorBridge.Services;
 public sealed class DownlinkWorker : IHostedService
 {
   private readonly IMqttBridge _mqtt;
+  private readonly ISignalRBridgeClient _signalR;
   private readonly HaServiceCaller _serviceCaller;
   private readonly CommandTranslator _translator;
   private readonly BridgeOptions _options;
@@ -25,6 +28,7 @@ public sealed class DownlinkWorker : IHostedService
 
   public DownlinkWorker(
       IMqttBridge mqtt,
+      ISignalRBridgeClient signalR,
       HaServiceCaller serviceCaller,
       CommandTranslator translator,
       IOptions<BridgeOptions> options,
@@ -32,6 +36,7 @@ public sealed class DownlinkWorker : IHostedService
       ILogger<DownlinkWorker> logger)
   {
     _mqtt = mqtt;
+    _signalR = signalR;
     _serviceCaller = serviceCaller;
     _translator = translator;
     _options = options.Value;
@@ -42,6 +47,7 @@ public sealed class DownlinkWorker : IHostedService
   public Task StartAsync(CancellationToken cancellationToken)
   {
     _mqtt.MessageReceived += OnMqttMessageAsync;
+    _signalR.CommandReceived += OnSignalRCommandAsync;
     _logger.LogInformation("DownlinkWorker started");
     return Task.CompletedTask;
   }
@@ -49,6 +55,7 @@ public sealed class DownlinkWorker : IHostedService
   public Task StopAsync(CancellationToken cancellationToken)
   {
     _mqtt.MessageReceived -= OnMqttMessageAsync;
+    _signalR.CommandReceived -= OnSignalRCommandAsync;
     _logger.LogInformation("DownlinkWorker stopped");
     return Task.CompletedTask;
   }
@@ -102,5 +109,78 @@ public sealed class DownlinkWorker : IHostedService
 
     _logger.LogInformation("Command {CommandId} processed: {Status}",
         command.CommandId, success ? "success" : "error");
+  }
+
+  /// <summary>
+  /// Handle commands arriving from a mobile client via SignalR hub.
+  /// Supports two commandTypes:
+  ///   - "call_service": standard CloudCommand envelope  
+  ///   - "mqtt_publish": raw topic+message to forward to HA local MQTT
+  /// </summary>
+  private async Task OnSignalRCommandAsync(string commandType, string json)
+  {
+    _logger.LogDebug("SignalR downlink received: type={CommandType}", commandType);
+
+    _messageLog.Add(new MessageLogEntry(
+        DateTime.UtcNow, MessageDirection.Inbound, $"signalr/{commandType}", json));
+
+    try
+    {
+      using var doc = JsonDocument.Parse(json);
+      var root = doc.RootElement;
+
+      // The hub may wrap payload inside an object with eventType/payload fields,
+      // or it may send the command object directly.
+      var payload = root.TryGetProperty("payload", out var p) ? p : root;
+
+      if (commandType == "ReceiveFromClient" && payload.TryGetProperty("commandType", out var ct))
+      {
+        // Unwrap the inner commandType (call_service, mqtt_publish)
+        commandType = ct.GetString() ?? commandType;
+        payload = payload.TryGetProperty("payload", out var inner) ? inner : payload;
+      }
+
+      if (string.Equals(commandType, "mqtt_publish", StringComparison.OrdinalIgnoreCase))
+      {
+        var topic = payload.GetProperty("topic").GetString()!;
+        var message = payload.TryGetProperty("message", out var m) ? m.GetRawText().Trim('"') : "{}";
+
+        _logger.LogInformation("SignalR mqtt_publish to {Topic}", topic);
+        var (success, error) = await _serviceCaller.PublishMqttAsync(topic, message, CancellationToken.None);
+
+        _messageLog.Add(new MessageLogEntry(
+            DateTime.UtcNow, MessageDirection.Outbound, topic, message,
+            success ? "signalr-mqtt" : $"error: {error}"));
+        return;
+      }
+
+      // Default: treat as call_service — deserialize as CloudCommand
+      var command = JsonSerializer.Deserialize<HomeAssistant.Models.CloudCommand>(payload.GetRawText());
+      if (command is null || string.IsNullOrWhiteSpace(command.Action))
+      {
+        _logger.LogWarning("Malformed SignalR call_service command, ignoring");
+        return;
+      }
+
+      // Generate a commandId if missing
+      if (string.IsNullOrWhiteSpace(command.CommandId))
+        command.CommandId = Guid.NewGuid().ToString("N")[..12];
+
+      var (svcSuccess, contextId, svcError) = await _serviceCaller.ExecuteCommandAsync(
+          command, CancellationToken.None);
+
+      _messageLog.Add(new MessageLogEntry(
+          DateTime.UtcNow, MessageDirection.Outbound,
+          $"ha/{command.TargetEntityId}/{command.Action}",
+          json,
+          svcSuccess ? "signalr-ok" : $"error: {svcError}"));
+
+      _logger.LogInformation("SignalR command {CommandId} processed: {Status}",
+          command.CommandId, svcSuccess ? "success" : "error");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error processing SignalR command");
+    }
   }
 }

@@ -51,6 +51,14 @@ public sealed class BridgeOptions
   [ConfigurationKeyName("ha_ws_endpoint")]
   public string HaWsEndpoint { get; set; } = string.Empty;
 
+  /// <summary>SignalR hub URL (e.g. https://your-server.com/hub/nestor).</summary>
+  [ConfigurationKeyName("signalr_hub_url")]
+  public string SignalrHubUrl { get; set; } = string.Empty;
+
+  /// <summary>API key for authenticating as a Bridge on the SignalR hub.</summary>
+  [ConfigurationKeyName("signalr_api_key")]
+  public string SignalrApiKey { get; set; } = string.Empty;
+
   [ConfigurationKeyName("telemetry_filter")]
   public TelemetryFilterOptions TelemetryFilter { get; set; } = new();
 

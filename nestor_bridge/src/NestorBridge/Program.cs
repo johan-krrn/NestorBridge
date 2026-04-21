@@ -7,6 +7,7 @@ using NestorBridge.Configuration;
 using NestorBridge.HomeAssistant;
 using NestorBridge.Mqtt;
 using NestorBridge.Services;
+using NestorBridge.SignalR;
 using NestorBridge.Translation;
 using NestorBridge.Web;
 
@@ -43,6 +44,7 @@ builder.WebHost.UseUrls("http://0.0.0.0:8099");
 builder.Services.AddSingleton<MessageLog>();
 builder.Services.AddSingleton<IMqttBridge, MqttBridge>();
 builder.Services.AddSingleton<IHaWebSocketClient, HaWebSocketClient>();
+builder.Services.AddSingleton<ISignalRBridgeClient, SignalRBridgeClient>();
 builder.Services.AddSingleton<HaServiceCaller>();
 builder.Services.AddSingleton<CommandTranslator>();
 builder.Services.AddSingleton<TelemetryTranslator>();
@@ -107,29 +109,37 @@ file sealed class BootstrapService : IHostedService
 {
   private readonly IMqttBridge _mqtt;
   private readonly IHaWebSocketClient _haClient;
+  private readonly ISignalRBridgeClient _signalR;
   private readonly ILogger<BootstrapService> _logger;
 
-  public BootstrapService(IMqttBridge mqtt, IHaWebSocketClient haClient, ILogger<BootstrapService> logger)
+  public BootstrapService(IMqttBridge mqtt, IHaWebSocketClient haClient,
+      ISignalRBridgeClient signalR, ILogger<BootstrapService> logger)
   {
     _mqtt = mqtt;
     _haClient = haClient;
+    _signalR = signalR;
     _logger = logger;
   }
 
   public async Task StartAsync(CancellationToken cancellationToken)
   {
-    _logger.LogInformation("Nestor Bridge starting — connecting to HA WebSocket and MQTT...");
+    _logger.LogInformation("Nestor Bridge starting — connecting to HA WebSocket, MQTT, and SignalR...");
 
     await _haClient.ConnectAsync(cancellationToken);
     _logger.LogInformation("HA WebSocket connected");
 
     await _mqtt.ConnectAsync(cancellationToken);
     _logger.LogInformation("MQTT connected");
+
+    await _signalR.ConnectAsync(cancellationToken);
+    if (_signalR.IsEnabled)
+      _logger.LogInformation("SignalR connected");
   }
 
   public async Task StopAsync(CancellationToken cancellationToken)
   {
     _logger.LogInformation("Nestor Bridge shutting down...");
+    await _signalR.DisconnectAsync(cancellationToken);
     await _mqtt.DisconnectAsync(cancellationToken);
     await _haClient.DisconnectAsync(cancellationToken);
   }
