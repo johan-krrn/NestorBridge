@@ -20,6 +20,8 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
 
   public event Func<string, byte[], Task>? MessageReceived;
 
+  public bool IsEnabled => _options.IsMqttEnabled;
+
   public MqttBridge(IOptions<BridgeOptions> options, ILogger<MqttBridge> logger)
   {
     _options = options.Value;
@@ -33,6 +35,11 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
 
   public async Task ConnectAsync(CancellationToken cancellationToken)
   {
+    if (!IsEnabled)
+    {
+      _logger.LogInformation("MQTT is disabled (no mqtt_host configured)");
+      return;
+    }
     var optionsBuilder = new MqttClientOptionsBuilder()
         .WithProtocolVersion(MqttProtocolVersion.V500)
         .WithClientId(_options.MqttClientId)
@@ -70,6 +77,9 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
   public async Task PublishAsync(string topic, byte[] payload, MqttQualityOfServiceLevel qos,
       CancellationToken cancellationToken)
   {
+    if (!IsEnabled)
+      return;
+
     var message = new MqttApplicationMessageBuilder()
         .WithTopic(topic)
         .WithPayload(payload)

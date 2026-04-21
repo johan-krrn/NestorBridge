@@ -31,7 +31,7 @@ options:
   log_level: "info"
   no_tls: false
   ha_ws_endpoint: ""
-  signalr_hub_url: ""
+  signalr_hub_url: "https://apinestor-poc-echtfte3cmfjfufz.francecentral-01.azurewebsites.net/hub/devices"
   signalr_api_key: ""
   telemetry_filter:
     domains:
@@ -41,9 +41,9 @@ options:
       - "climate"
       - "binary_sensor"
 schema:
-  mqtt_host: str
+  mqtt_host: "str?"
   mqtt_port: port
-  mqtt_client_id: str
+  mqtt_client_id: "str?"
   box_id: str
   auth_mode: "list(sas|x509)"
   sas_username: "str?"

@@ -123,24 +123,39 @@ file sealed class BootstrapService : IHostedService
 
   public async Task StartAsync(CancellationToken cancellationToken)
   {
-    _logger.LogInformation("Nestor Bridge starting — connecting to HA WebSocket, MQTT, and SignalR...");
+    _logger.LogInformation("Nestor Bridge starting...");
 
     await _haClient.ConnectAsync(cancellationToken);
     _logger.LogInformation("HA WebSocket connected");
 
-    await _mqtt.ConnectAsync(cancellationToken);
-    _logger.LogInformation("MQTT connected");
+    if (_mqtt.IsEnabled)
+    {
+      await _mqtt.ConnectAsync(cancellationToken);
+      _logger.LogInformation("MQTT connected");
+    }
+    else
+    {
+      _logger.LogInformation("MQTT is disabled (no mqtt_host configured)");
+    }
 
-    await _signalR.ConnectAsync(cancellationToken);
     if (_signalR.IsEnabled)
+    {
+      await _signalR.ConnectAsync(cancellationToken);
       _logger.LogInformation("SignalR connected");
+    }
+    else
+    {
+      _logger.LogInformation("SignalR is disabled (no hub URL configured)");
+    }
   }
 
   public async Task StopAsync(CancellationToken cancellationToken)
   {
     _logger.LogInformation("Nestor Bridge shutting down...");
-    await _signalR.DisconnectAsync(cancellationToken);
-    await _mqtt.DisconnectAsync(cancellationToken);
+    if (_signalR.IsEnabled)
+      await _signalR.DisconnectAsync(cancellationToken);
+    if (_mqtt.IsEnabled)
+      await _mqtt.DisconnectAsync(cancellationToken);
     await _haClient.DisconnectAsync(cancellationToken);
   }
 }

@@ -1,16 +1,28 @@
 # Nestor Bridge — Home Assistant Add-on
 
-Pont protocolaire bidirectionnel entre **Azure Event Grid Namespace (MQTT v5)** et **Home Assistant** via WebSocket API.
+Pont protocolaire bidirectionnel entre **Azure Event Grid Namespace (MQTT v5)** / **Azure SignalR** et **Home Assistant** via WebSocket API.
 
 ## Architecture
 
 ```
 Azure Event Grid (MQTT v5)  <──TLS──>  [nestor-bridge]  <──WS──>  Home Assistant Core
-            │                              │
-     commands/#              state_changed events
-     ack publish             call_service
-     telemetry               heartbeat
+Azure SignalR Hub           <──HTTPS──>       │
+                                              │
+     commands/#               state_changed events
+     ack publish              call_service
+     telemetry                heartbeat
 ```
+
+## Transports
+
+L'add-on supporte deux transports cloud, activables indépendamment :
+
+| Transport | Config requise | Usage |
+|---|---|---|
+| **MQTT** (Event Grid) | `mqtt_host`, `mqtt_client_id`, `box_id` | Pub/sub MQTT v5 avec Azure Event Grid |
+| **SignalR** | `signalr_hub_url`, `signalr_api_key`, `box_id` | Temps réel via Azure SignalR Service |
+
+Au minimum un transport doit être configuré. Les deux peuvent fonctionner simultanément.
 
 ## Prérequis
 
@@ -102,18 +114,35 @@ mosquitto_sub -h localhost -t "devices/nestor-local-test/heartbeat"
 
 | Option | Type | Défaut | Description |
 |---|---|---|---|
-| `mqtt_host` | string | `""` | Hostname Event Grid Namespace |
+| `box_id` | string | `""` | **Requis.** Identifiant unique de la NestorBox |
+| `mqtt_host` | string? | `""` | Hostname Event Grid Namespace (optionnel si SignalR configuré) |
 | `mqtt_port` | int | `8883` | Port MQTT (TLS) |
-| `mqtt_client_id` | string | `""` | Client ID MQTT (= box_id en prod) |
-| `box_id` | string | `""` | Identifiant unique de la NestorBox |
+| `mqtt_client_id` | string? | `""` | Client ID MQTT (requis si mqtt_host est renseigné) |
 | `auth_mode` | `sas`/`x509` | `sas` | Mode d'authentification MQTT |
-| `sas_username` | string | `""` | Username SAS (mode SAS uniquement) |
-| `sas_password` | string | `""` | Password/token SAS |
+| `sas_username` | string? | `""` | Username SAS (mode SAS uniquement) |
+| `sas_password` | string? | `""` | Password/token SAS |
 | `cert_path` | string | `/ssl/nestor/device.pem` | Chemin certificat client X.509 |
 | `key_path` | string | `/ssl/nestor/device.key` | Chemin clé privée X.509 |
 | `ca_path` | string | `/ssl/nestor/ca.pem` | Chemin CA root |
+| `signalr_hub_url` | string? | `""` | URL du hub SignalR (optionnel si MQTT configuré) |
+| `signalr_api_key` | string? | `""` | API key (BridgeApiKey) pour le hub SignalR |
 | `log_level` | enum | `info` | Niveau de log |
 | `telemetry_filter.domains` | string[] | `[light, switch, ...]` | Domaines HA à remonter au cloud |
+
+> **Note** : Au moins un transport (MQTT ou SignalR) doit être configuré.
+
+### Exemple : mode SignalR seul
+
+```json
+{
+  "box_id": "nestor-0a1b2c3d",
+  "signalr_hub_url": "https://apinestor-poc-echtfte3cmfjfufz.francecentral-01.azurewebsites.net/hub/devices",
+  "signalr_api_key": "<votre BridgeApiKey>",
+  "log_level": "debug"
+}
+```
+
+Le client SignalR effectuera automatiquement la négociation via `POST /hub/devices/negotiate?apiKey=<key>`.
 
 ## Structure du projet
 
@@ -131,6 +160,7 @@ nestor-bridge/
     │   ├── Program.cs
     │   ├── Configuration/
     │   ├── Mqtt/
+    │   ├── SignalR/
     │   ├── HomeAssistant/
     │   ├── Translation/
     │   └── Services/

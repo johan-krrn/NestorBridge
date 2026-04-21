@@ -62,16 +62,28 @@ public sealed class BridgeOptions
   [ConfigurationKeyName("telemetry_filter")]
   public TelemetryFilterOptions TelemetryFilter { get; set; } = new();
 
+  /// <summary>Whether MQTT is configured (mqtt_host is set).</summary>
+  public bool IsMqttEnabled => !string.IsNullOrWhiteSpace(MqttHost);
+
+  /// <summary>Whether SignalR is configured (hub URL is set).</summary>
+  public bool IsSignalREnabled => !string.IsNullOrWhiteSpace(SignalrHubUrl);
+
   /// <summary>
   /// Validates required configuration fields. Throws if invalid.
+  /// At least one transport (MQTT or SignalR) must be configured.
+  /// box_id is always required.
   /// </summary>
   public void Validate()
   {
-    if (string.IsNullOrWhiteSpace(MqttHost))
-      throw new InvalidOperationException("mqtt_host is required in options.json");
     if (string.IsNullOrWhiteSpace(BoxId))
       throw new InvalidOperationException("box_id is required in options.json");
-    if (string.IsNullOrWhiteSpace(MqttClientId))
-      throw new InvalidOperationException("mqtt_client_id is required in options.json");
+
+    if (!IsMqttEnabled && !IsSignalREnabled)
+      throw new InvalidOperationException(
+          "At least one transport must be configured: set mqtt_host (MQTT) or signalr_hub_url (SignalR) in options.json");
+
+    // When MQTT is enabled, mqtt_client_id is required
+    if (IsMqttEnabled && string.IsNullOrWhiteSpace(MqttClientId))
+      throw new InvalidOperationException("mqtt_client_id is required when mqtt_host is configured");
   }
 }

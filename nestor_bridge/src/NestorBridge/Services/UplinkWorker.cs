@@ -61,31 +61,35 @@ public sealed class UplinkWorker : IHostedService
       return;
 
     var (entityId, payload) = result.Value;
-    var topic = Topics.TelemetryState(_options.BoxId, entityId);
+    var payloadStr = System.Text.Encoding.UTF8.GetString(payload);
 
-    try
+    // Publish via MQTT if enabled
+    if (_mqtt.IsEnabled)
     {
-      await _mqtt.PublishAsync(topic, payload,
-          MqttQualityOfServiceLevel.AtMostOnce, CancellationToken.None);
+      var topic = Topics.TelemetryState(_options.BoxId, entityId);
+      try
+      {
+        await _mqtt.PublishAsync(topic, payload,
+            MqttQualityOfServiceLevel.AtMostOnce, CancellationToken.None);
 
-      _messageLog.Add(new MessageLogEntry(
-          DateTime.UtcNow, MessageDirection.Outbound, topic,
-          System.Text.Encoding.UTF8.GetString(payload)));
+        _messageLog.Add(new MessageLogEntry(
+            DateTime.UtcNow, MessageDirection.Outbound, topic, payloadStr));
 
-      _logger.LogDebug("Telemetry published for {EntityId}", entityId);
+        _logger.LogDebug("Telemetry published via MQTT for {EntityId}", entityId);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to publish telemetry via MQTT for {EntityId}", entityId);
+      }
     }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Failed to publish telemetry for {EntityId}", entityId);
-    }
 
-    // Also relay to mobile clients via SignalR if enabled
+    // Relay to mobile clients via SignalR if enabled
     if (_signalR.IsEnabled)
     {
       try
       {
-        var payloadStr = System.Text.Encoding.UTF8.GetString(payload);
         await _signalR.RelayToClientsAsync("state_changed", payloadStr, CancellationToken.None);
+        _logger.LogDebug("Telemetry relayed via SignalR for {EntityId}", entityId);
       }
       catch (Exception ex)
       {

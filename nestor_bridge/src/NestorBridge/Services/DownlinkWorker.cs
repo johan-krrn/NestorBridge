@@ -46,16 +46,21 @@ public sealed class DownlinkWorker : IHostedService
 
   public Task StartAsync(CancellationToken cancellationToken)
   {
-    _mqtt.MessageReceived += OnMqttMessageAsync;
-    _signalR.CommandReceived += OnSignalRCommandAsync;
-    _logger.LogInformation("DownlinkWorker started");
+    if (_mqtt.IsEnabled)
+      _mqtt.MessageReceived += OnMqttMessageAsync;
+    if (_signalR.IsEnabled)
+      _signalR.CommandReceived += OnSignalRCommandAsync;
+    _logger.LogInformation("DownlinkWorker started (MQTT={MqttEnabled}, SignalR={SignalREnabled})",
+        _mqtt.IsEnabled, _signalR.IsEnabled);
     return Task.CompletedTask;
   }
 
   public Task StopAsync(CancellationToken cancellationToken)
   {
-    _mqtt.MessageReceived -= OnMqttMessageAsync;
-    _signalR.CommandReceived -= OnSignalRCommandAsync;
+    if (_mqtt.IsEnabled)
+      _mqtt.MessageReceived -= OnMqttMessageAsync;
+    if (_signalR.IsEnabled)
+      _signalR.CommandReceived -= OnSignalRCommandAsync;
     _logger.LogInformation("DownlinkWorker stopped");
     return Task.CompletedTask;
   }
