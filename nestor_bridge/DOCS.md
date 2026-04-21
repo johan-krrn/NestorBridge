@@ -34,7 +34,7 @@ Un message de heartbeat est publié toutes les 60 secondes via MQTT (`devices/{b
 Pour connecter l'addon au hub SignalR :
 
 ```yaml
-signalr_hub_url: "https://apinestor-poc-echtfte3cmfjfufz.francecentral-01.azurewebsites.net/hub/devices"
+signalr_hub_url: "https://your-signalr-instance.azurewebsites.net/hub/devices"
 signalr_api_key: "<votre BridgeApiKey>"
 ```
 

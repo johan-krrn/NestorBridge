@@ -136,7 +136,7 @@ mosquitto_sub -h localhost -t "devices/nestor-local-test/heartbeat"
 ```json
 {
   "box_id": "nestor-0a1b2c3d",
-  "signalr_hub_url": "https://apinestor-poc-echtfte3cmfjfufz.francecentral-01.azurewebsites.net/hub/devices",
+  "signalr_hub_url": "https://your-signalr-instance.azurewebsites.net/hub/devices",
   "signalr_api_key": "<votre BridgeApiKey>",
   "log_level": "debug"
 }
