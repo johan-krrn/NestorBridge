@@ -64,6 +64,14 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
         .Build(), cancellationToken);
 
     _logger.LogInformation("Subscribed to {Topic}", commandTopic);
+
+    // Subscribe to cloud requests topic
+    await _client.SubscribeAsync(new MqttTopicFilterBuilder()
+        .WithTopic(Topics.CloudRequests)
+        .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build(), cancellationToken);
+
+    _logger.LogInformation("Subscribed to {Topic}", Topics.CloudRequests);
     _reconnectDelayMs = 1000; // Reset on successful connect
   }
 

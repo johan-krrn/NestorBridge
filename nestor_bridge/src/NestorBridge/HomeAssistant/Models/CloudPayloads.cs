@@ -1,6 +1,31 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace NestorBridge.HomeAssistant.Models;
+
+/// <summary>
+/// Cloud request received on ha/commands/requests.
+/// </summary>
+public sealed class CloudRequest
+{
+  [JsonPropertyName("Command")]
+  public string Command { get; set; } = string.Empty;
+
+  [JsonPropertyName("TargetConnectionId")]
+  public string TargetConnectionId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Response published on ha/commands/responses.
+/// </summary>
+public sealed class CloudRequestResponse
+{
+  [JsonPropertyName("TargetConnectionId")]
+  public string TargetConnectionId { get; set; } = string.Empty;
+
+  [JsonPropertyName("Data")]
+  public JsonElement Data { get; set; }
+}
 
 /// <summary>
 /// MQTT command payload received from the cloud.

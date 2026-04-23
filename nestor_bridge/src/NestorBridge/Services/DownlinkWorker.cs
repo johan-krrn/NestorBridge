@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MQTTnet.Protocol;
 using NestorBridge.Configuration;
 using NestorBridge.HomeAssistant;
+using NestorBridge.HomeAssistant.Models;
 using NestorBridge.Mqtt;
 using NestorBridge.Translation;
 using NestorBridge.Web;
@@ -17,6 +19,7 @@ namespace NestorBridge.Services;
 public sealed class DownlinkWorker : IHostedService
 {
   private readonly IMqttBridge _mqtt;
+  private readonly IHaWebSocketClient _haClient;
   private readonly HaServiceCaller _serviceCaller;
   private readonly CommandTranslator _translator;
   private readonly BridgeOptions _options;
@@ -25,6 +28,7 @@ public sealed class DownlinkWorker : IHostedService
 
   public DownlinkWorker(
       IMqttBridge mqtt,
+      IHaWebSocketClient haClient,
       HaServiceCaller serviceCaller,
       CommandTranslator translator,
       IOptions<BridgeOptions> options,
@@ -32,6 +36,7 @@ public sealed class DownlinkWorker : IHostedService
       ILogger<DownlinkWorker> logger)
   {
     _mqtt = mqtt;
+    _haClient = haClient;
     _serviceCaller = serviceCaller;
     _translator = translator;
     _options = options.Value;
@@ -62,6 +67,14 @@ public sealed class DownlinkWorker : IHostedService
     _messageLog.Add(new MessageLogEntry(
         DateTime.UtcNow, MessageDirection.Inbound, topic, payloadStr));
 
+    // ── Cloud request handling (ha/commands/requests) ────────────────
+    if (string.Equals(topic, Topics.CloudRequests, StringComparison.Ordinal))
+    {
+      _ = Task.Run(() => HandleCloudRequestAsync(payloadStr));
+      return;
+    }
+
+    // ── Existing command flow ────────────────────────────────────────
     var command = _translator.Translate(payload);
     if (command is null)
     {
@@ -102,5 +115,63 @@ public sealed class DownlinkWorker : IHostedService
 
     _logger.LogInformation("Command {CommandId} processed: {Status}",
         command.CommandId, success ? "success" : "error");
+  }
+
+  private async Task HandleCloudRequestAsync(string payloadStr)
+  {
+    CloudRequest? request = null;
+    try
+    {
+      request = JsonSerializer.Deserialize<CloudRequest>(payloadStr);
+    }
+    catch (JsonException ex)
+    {
+      _logger.LogWarning(ex, "Failed to deserialize cloud request payload");
+      return;
+    }
+
+    if (request is null || string.IsNullOrWhiteSpace(request.TargetConnectionId))
+    {
+      _logger.LogWarning("Cloud request missing TargetConnectionId, dropping");
+      return;
+    }
+
+    _logger.LogInformation("Cloud request received: Command={Command}, ConnectionId={ConnectionId}",
+        request.Command, request.TargetConnectionId);
+
+    if (!string.Equals(request.Command, "get_states", StringComparison.OrdinalIgnoreCase))
+    {
+      _logger.LogWarning("Unsupported cloud request command: {Command}", request.Command);
+      return;
+    }
+
+    try
+    {
+      var states = await _haClient.GetStatesAsync(CancellationToken.None);
+
+      var response = new CloudRequestResponse
+      {
+        TargetConnectionId = request.TargetConnectionId,
+        Data = states
+      };
+
+      var responseBytes = JsonSerializer.SerializeToUtf8Bytes(response);
+
+      await _mqtt.PublishAsync(Topics.CloudResponses, responseBytes,
+          MqttQualityOfServiceLevel.AtLeastOnce, CancellationToken.None);
+
+      var responseStr = System.Text.Encoding.UTF8.GetString(responseBytes);
+      _messageLog.Add(new MessageLogEntry(
+          DateTime.UtcNow, MessageDirection.Outbound, Topics.CloudResponses,
+          responseStr, "get_states"));
+
+      _logger.LogInformation("get_states response published for ConnectionId={ConnectionId}",
+          request.TargetConnectionId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to handle get_states request for ConnectionId={ConnectionId}",
+          request.TargetConnectionId);
+    }
   }
 }

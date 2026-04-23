@@ -20,6 +20,12 @@ public static class Topics
   public static string Heartbeat(string boxId) =>
       $"devices/{boxId}/heartbeat";
 
+  /// <summary>Topic for receiving cloud requests (get_states, etc.).</summary>
+  public const string CloudRequests = "ha/commands/requests";
+
+  /// <summary>Topic for publishing cloud request responses.</summary>
+  public const string CloudResponses = "ha/commands/responses";
+
   /// <summary>
   /// Extract the HA MQTT sub-topic from a full downlink topic.
   /// e.g. "devices/mybox/commands/zigbee2mqtt/prise/set" → "zigbee2mqtt/prise/set"

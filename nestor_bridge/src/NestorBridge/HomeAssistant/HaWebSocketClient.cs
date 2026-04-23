@@ -111,6 +111,28 @@ public sealed class HaWebSocketClient : IHaWebSocketClient, IAsyncDisposable
     }
   }
 
+  public async Task<JsonElement> GetStatesAsync(CancellationToken cancellationToken)
+  {
+    var id = Interlocked.Increment(ref _messageId);
+
+    var tcs = new TaskCompletionSource<HaMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+    _pending[id] = tcs;
+
+    var json = JsonSerializer.Serialize(new { id, type = "get_states" });
+    await SendRawAsync(json, cancellationToken);
+
+    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    cts.CancelAfter(TimeSpan.FromSeconds(30));
+    await using (cts.Token.Register(() => tcs.TrySetCanceled()))
+    {
+      var result = await tcs.Task;
+      if (result.Success != true)
+        throw new InvalidOperationException($"get_states failed: {result.Error?.Message}");
+
+      return result.Result ?? default;
+    }
+  }
+
   public async Task DisconnectAsync(CancellationToken cancellationToken)
   {
     _loopCts?.Cancel();
