@@ -67,8 +67,8 @@ public sealed class DownlinkWorker : IHostedService
     _messageLog.Add(new MessageLogEntry(
         DateTime.UtcNow, MessageDirection.Inbound, topic, payloadStr));
 
-    // ── Cloud request handling (ha/commands/requests) ────────────────
-    if (string.Equals(topic, Topics.CloudRequests, StringComparison.Ordinal))
+    // ── Cloud request handling (devices/{boxId}/commands/requests) ─────
+    if (string.Equals(topic, Topics.CloudRequests(_options.BoxId), StringComparison.Ordinal))
     {
       _ = Task.Run(() => HandleCloudRequestAsync(payloadStr));
       return;
@@ -157,12 +157,13 @@ public sealed class DownlinkWorker : IHostedService
 
       var responseBytes = JsonSerializer.SerializeToUtf8Bytes(response);
 
-      await _mqtt.PublishAsync(Topics.CloudResponses, responseBytes,
+      var responseTopic = Topics.CloudResponses(_options.BoxId);
+      await _mqtt.PublishAsync(responseTopic, responseBytes,
           MqttQualityOfServiceLevel.AtLeastOnce, CancellationToken.None);
 
       var responseStr = System.Text.Encoding.UTF8.GetString(responseBytes);
       _messageLog.Add(new MessageLogEntry(
-          DateTime.UtcNow, MessageDirection.Outbound, Topics.CloudResponses,
+          DateTime.UtcNow, MessageDirection.Outbound, responseTopic,
           responseStr, "get_states"));
 
       _logger.LogInformation("get_states response published for ConnectionId={ConnectionId}",

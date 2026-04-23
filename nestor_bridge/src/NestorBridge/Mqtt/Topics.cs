@@ -20,22 +20,34 @@ public static class Topics
   public static string Heartbeat(string boxId) =>
       $"devices/{boxId}/heartbeat";
 
-  /// <summary>Topic for receiving cloud requests (get_states, etc.).</summary>
-  public const string CloudRequests = "ha/commands/requests";
+  /// <summary>Topic for receiving cloud requests (get_states, etc.).
+  /// Covered by the existing Commands wildcard — no extra subscription needed.
+  /// </summary>
+  public static string CloudRequests(string boxId) =>
+      $"devices/{boxId}/commands/requests";
 
   /// <summary>Topic for publishing cloud request responses.</summary>
-  public const string CloudResponses = "ha/commands/responses";
+  public static string CloudResponses(string boxId) =>
+      $"devices/{boxId}/responses";
 
   /// <summary>
   /// Extract the HA MQTT sub-topic from a full downlink topic.
   /// e.g. "devices/mybox/commands/zigbee2mqtt/prise/set" → "zigbee2mqtt/prise/set"
   /// Returns null if the topic does not match the expected prefix.
+  /// Returns null for reserved segments ("requests") that must not be treated as passthrough.
   /// </summary>
   public static string? ExtractSubTopic(string boxId, string fullTopic)
   {
     var prefix = $"devices/{boxId}/commands/";
-    return fullTopic.StartsWith(prefix, StringComparison.Ordinal) && fullTopic.Length > prefix.Length
-        ? fullTopic[prefix.Length..]
-        : null;
+    if (!fullTopic.StartsWith(prefix, StringComparison.Ordinal) || fullTopic.Length <= prefix.Length)
+      return null;
+
+    var sub = fullTopic[prefix.Length..];
+
+    // Reserved segments handled internally — not forwarded as passthrough
+    if (string.Equals(sub, "requests", StringComparison.OrdinalIgnoreCase))
+      return null;
+
+    return sub;
   }
 }

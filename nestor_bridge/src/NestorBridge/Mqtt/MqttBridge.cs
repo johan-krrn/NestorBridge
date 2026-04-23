@@ -56,22 +56,14 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
 
     await _client.ConnectAsync(mqttOptions, cancellationToken);
 
-    // Subscribe to commands topic
+    // Subscribe to commands topic (also covers devices/{boxId}/commands/requests via wildcard)
     var commandTopic = Topics.Commands(_options.BoxId);
-    await _client.SubscribeAsync(new MqttTopicFilterBuilder()
+    var cmdSubResult = await _client.SubscribeAsync(new MqttTopicFilterBuilder()
         .WithTopic(commandTopic)
         .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
         .Build(), cancellationToken);
 
-    _logger.LogInformation("Subscribed to {Topic}", commandTopic);
-
-    // Subscribe to cloud requests topic
-    await _client.SubscribeAsync(new MqttTopicFilterBuilder()
-        .WithTopic(Topics.CloudRequests)
-        .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
-        .Build(), cancellationToken);
-
-    _logger.LogInformation("Subscribed to {Topic}", Topics.CloudRequests);
+    LogSubscribeResult(commandTopic, cmdSubResult);
     _reconnectDelayMs = 1000; // Reset on successful connect
   }
 
@@ -150,11 +142,35 @@ public sealed class MqttBridge : IMqttBridge, IAsyncDisposable
     var topic = args.ApplicationMessage.Topic;
     var payload = args.ApplicationMessage.PayloadSegment.ToArray();
 
-    _logger.LogDebug("MQTT message received on {Topic} ({Bytes} bytes)", topic, payload.Length);
+    // Log at Information for cloud request/response topics so they are always visible
+    if (string.Equals(topic, Topics.CloudRequests(_options.BoxId), StringComparison.Ordinal) ||
+        string.Equals(topic, Topics.CloudResponses(_options.BoxId), StringComparison.Ordinal))
+      _logger.LogInformation("MQTT message received on {Topic} ({Bytes} bytes)", topic, payload.Length);
+    else
+      _logger.LogDebug("MQTT message received on {Topic} ({Bytes} bytes)", topic, payload.Length);
 
     if (MessageReceived is not null)
     {
       await MessageReceived.Invoke(topic, payload);
+    }
+  }
+
+  private void LogSubscribeResult(string topic, MqttClientSubscribeResult result)
+  {
+    foreach (var item in result.Items)
+    {
+      var success = item.ResultCode is
+          MqttClientSubscribeResultCode.GrantedQoS0 or
+          MqttClientSubscribeResultCode.GrantedQoS1 or
+          MqttClientSubscribeResultCode.GrantedQoS2;
+
+      if (success)
+        _logger.LogInformation("Subscribed to {Topic} (QoS={ResultCode})", topic, item.ResultCode);
+      else
+        _logger.LogError(
+            "Subscription to {Topic} REFUSED by broker (ResultCode={ResultCode}). " +
+            "Check Azure Event Grid topic space permissions for this client.",
+            topic, item.ResultCode);
     }
   }
 
